@@ -42,8 +42,8 @@ class OF:
         bb = [(x-offset, y-offset), (x+box+offset, y+box+offset)]   # boundary box, rat must be within this box
         ob = [(x, y), (x + box, y + box)]                       # outer box should match the size of floor of the apparatus
         intermediate_box = [(x+b8, y+b8), (x+b8+b34, y+b8+b34)]
-        intermediate_center_box = [(x+b38, y+b38), (x+b38+b4, y+b38+b4)]
-        very_center_box = [(x+b4, y+b4), (x+b2+b4, y+b2+b4)]
+        intermediate_center_box = [(x+b4, y+b4), (x+b4+b2, y+b4+b2)]
+        very_center_box = [(x+b38, y+b38), (x+b38+b4, y+b38+b4)]
         return bb, ob, intermediate_box, intermediate_center_box, very_center_box
 
 
@@ -80,53 +80,33 @@ class OF:
     def whichBox(self, boxedFrame, cx, cy): 
     # finds which box the rat is in
         boxes = self.getBoxes()
-        centerbox = boxes[2]
-        boundcb1 = boxes[3]
-        boundcb2 = boxes[4]
-        boundcb3 = boxes[5]
-        boundcb4 = boxes[6]
-        boundsb1 = boxes[7]
-        boundsb2 = boxes[8] 
-        boundsb3 = boxes[9] 
-        boundsb4 = boxes[10]   
-        cornerbox1 = boxes[11] 
-        cornerbox2 = boxes[12] 
-        cornerbox3 = boxes[13] 
-        cornerbox4 = boxes[14] 
-        sidebox1 = boxes[15] 
-        sidebox2 = boxes[16] 
-        sidebox3 = boxes[17] 
-        sidebox4 = boxes[18]      
+
+        bb = boxes[0]
+        ob = boxes[1]
+        intermediate = boxes[2]
+        intermediate_center = boxes[3]
+        very_center = boxes[4]
+
         boxText = ''    
-        if boundcb1[0][0] <= cx <= boundcb1[1][0] and boundcb1[0][1] <= cy <= boundcb1[1][1]:
-            cv2.rectangle(boxedFrame, cornerbox1[0], cornerbox1[1], (0, 0,255), 1)
-            boxText = 'Corner LT'
-        elif boundcb2[0][0] <= cx <= boundcb2[1][0] and boundcb2[0][1] <= cy <= boundcb2[1][1]:
-            cv2.rectangle(boxedFrame, cornerbox2[0], cornerbox2[1], (0, 0,255), 1) 
-            boxText = 'Corner RT' 
-        elif boundcb3[0][0] <= cx <= boundcb3[1][0] and boundcb3[0][1] <= cy <= boundcb3[1][1]:
-            cv2.rectangle(boxedFrame, cornerbox3[0], cornerbox3[1], (0, 0,255), 1)  
-            boxText = 'Corner LB' 
-        elif boundcb4[0][0] <= cx <= boundcb4[1][0] and boundcb4[0][1] <= cy <= boundcb4[1][1]:
-            cv2.rectangle(boxedFrame, cornerbox4[0], cornerbox4[1], (0, 0,255), 1) 
-            boxText = 'Corner RB' 
-        elif boundsb1[0][0] <= cx <= boundsb1[1][0] and boundsb1[0][1] <= cy <= boundsb1[1][1]:
-            cv2.rectangle(boxedFrame, sidebox1[0], sidebox1[1], (0, 0,255), 1) 
-            boxText = 'Side Top'  
-        elif boundsb2[0][0] <= cx <= boundsb2[1][0] and boundsb2[0][1] <= cy <= boundsb2[1][1]:
-            cv2.rectangle(boxedFrame, sidebox2[0], sidebox2[1], (0, 0,255), 1)  
-            boxText = 'Side Right'  
-        elif boundsb3[0][0] <= cx <= boundsb3[1][0] and boundsb3[0][1] <= cy <= boundsb3[1][1]:
-            cv2.rectangle(boxedFrame, sidebox3[0], sidebox3[1], (0, 0,255), 1)  
-            boxText = 'Side Bottom'  
-        elif boundsb4[0][0] <= cx <= boundsb4[1][0] and boundsb4[0][1] <= cy <= boundsb4[1][1]:
-            cv2.rectangle(boxedFrame, sidebox4[0], sidebox4[1], (0, 0,255), 1)  
-            boxText = 'Side Left'  
-        elif centerbox[0][0] <= cx <= centerbox[1][0] and centerbox[0][1] <= cy <= centerbox[1][1]:
-            cv2.rectangle(boxedFrame, centerbox[0], centerbox[1], (0, 0,255), 1) 
-            boxText = 'Center'   
+
+        if very_center[0][0] <= cx <= very_center[1][0] and very_center[0][1] <= cy <= very_center[1][1]:
+            cv2.rectangle(boxedFrame, very_center[0], very_center[1], (0, 0,255), 1)
+            boxText = 'very_center'
+        elif intermediate_center[0][0] <= cx <= intermediate_center[1][0] and intermediate_center[0][1] <= cy <= intermediate_center[1][1]:
+            cv2.rectangle(boxedFrame, intermediate_center[0], intermediate_center[1], (0, 0,255), 1)
+            cv2.rectangle(boxedFrame, very_center[0], very_center[1], (0, 0,255), 1)
+            boxText = 'intermediate_center'
+        elif intermediate[0][0] <= cx <= intermediate[1][0] and intermediate[0][1] <= cy <= intermediate[1][1]:
+            cv2.rectangle(boxedFrame, intermediate[0], intermediate[1], (0, 0,255), 1)
+            cv2.rectangle(boxedFrame, intermediate_center[0], intermediate_center[1], (0, 0,255), 1)
+            boxText = 'intermediate'
+        elif bb[0][0] <= cx <= bb[1][0] and bb[0][1] <= cy <= bb[1][1]:
+            cv2.rectangle(boxedFrame, ob[0], ob[1], (0, 0,255), 1)
+            cv2.rectangle(boxedFrame, intermediate[0], intermediate[1], (0, 0,255), 1)
+            boxText = 'near_wall'
         else:  
-            print 'Error: should not happen'  
+            print 'Error: should not happen'          
+
         return boxedFrame, boxText    
     
     def ratInBox(self, cx, cy):
