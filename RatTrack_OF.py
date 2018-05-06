@@ -44,24 +44,6 @@ class OF:
         intermediate_box = [(x+b8, y+b8), (x+b8+b34, y+b8+b34)]
         intermediate_center_box = [(x+b38, y+b38), (x+b38+b4, y+b38+b4)]
         very_center_box = [(x+b4, y+b4), (x+b2+b4, y+b2+b4)]
-        # centb = [(x+b4, y+b4), (x+b4 + b2, y+b4 + b2)]          # center box
-        # bcb1 = [(x-offset, y-offset), (x+b4, y+b4)]             # left top + offset
-        # bcb2 = [(x+b34, y-offset), (x+box+offset, y+b4)]        # right top + offset
-        # bcb3 = [(x-offset, y+b34), (x+b4, y+box+offset)]        # left bottom + offset
-        # bcb4 = [(x+b34, y+b34), (x+box+offset, y+box+offset)]   # right bottom + offset
-        # bsb1 = [(x+b4, y-offset), (x+b34, y+b4)]                # top + offset
-        # bsb2 = [(x+3*b4, y+b4), (x+box+offset, y+b34)]          # right + offset
-        # bsb3 = [(x+b4, y+b34), (x+b34, y+box+offset)]           # bottom + offset
-        # bsb4 = [(x-offset, y+b4), (x+b4, y+b34)]                # left + offset
-        # cb1 = [(x, y), (x+b4, y+b4)]                # left top
-        # cb2 = [(x+b34, y), (x+box, y+b4)]           # right top
-        # cb3 = [(x, y+b34), (x+b4, y+box)]        # left bottom
-        # cb4 = [(x+b34, y+b34), (x+box, y+box)]      # right bottom
-        # sb1 = [(x+b4, y), (x+b34, y+b4)]            # top
-        # sb2 = [(x+b34, y+b4), (x+box, y+b34)]       # right
-        # sb3 = [(x+b4, y+b34), (x+b34, y+box)]       # bottom
-        # sb4 = [(x, y+b4), (x+b4, y+b34)]            # left
-        # return bb, ob, centb, bcb1, bcb2, bcb3, bcb4, bsb1, bsb2, bsb3, bsb4, cb1, cb2, cb3, cb4, sb1, sb2, sb3, sb4
         return bb, ob, intermediate_box, intermediate_center_box, very_center_box
 
 
