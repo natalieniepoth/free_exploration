@@ -19,9 +19,9 @@ counters = myutil.Bunch(frame = 0, noCountour = 0, notInBox = 0, countourTooSmal
 class OF:
     def __init__(self):
         # OF box properties
-        origin_x = 122      # x,y coordinates of top left hand corner of the center square of apparatus
-        origin_y = 39
-        centerBoxSize = 400 # size of center square of apparatus
+        origin_x = 100      # x,y coordinates of top left hand corner of the center square of apparatus
+        origin_y = 30
+        centerBoxSize = 390 # size of center square of apparatus
         boxOffset = 30        # to make boundary box somewhat bigger than the floor of the apparatus in case rat rears up on walls
         self.OF_box = myutil.Bunch(x = origin_x, y = origin_y, boxSize = centerBoxSize, boffset = boxOffset)
     
@@ -32,7 +32,7 @@ class OF:
     # updates the EPM box coordinates
         x = self.OF_box.x 
         y = self.OF_box.y
-        box = self.OF_box.boxSize 
+        box = self.OF_box.boxSize
         offset = self.OF_box.boffset
         b4 = int(round(box/4))  # everything has to be integer for plotting
         b8 = int(round(box/8))
@@ -127,19 +127,12 @@ class OF:
         return ([0,450],[0,400])
 
 
-# NN: Removed original function getBackground() that averages first set of frames to produce background 
-# NN: Removed original function skipXseconds()  
-
 def findRat(camera, backgroundFrame):
 # find when rat is first alone in box by testing when centroid of largest contour is within the box
-    global ratFrame
-    frameNumber = 0 
-    ratInFrames = 1
     boxes = assaySpecific.getBoxes()
+    noRat = True
     cnt = []     # stores 'rat' contour
-
-    
-    while ratInFrames < 2: # Conditions must be satisfied for 50 consecutive frames
+    while noRat:
         (_, frame) = camera.read()
         frame, contours = myutil.findCountours(frame, backgroundFrame)
 
@@ -162,11 +155,6 @@ def findRat(camera, backgroundFrame):
             else: # only 1 potential 'rat'
                 cnt = contours[0]
 
-            # if assaySpecific.ratInBox(cx, cy):
-            #     continue
-            # else:
-            #     ratInFrames=0
-
             if cnt == []:  # deal with case where there are multiple contours but none in box so that cnt is not defined in first frame
                 pass
             else:
@@ -174,17 +162,9 @@ def findRat(camera, backgroundFrame):
                 M = cv2.moments(cnt)
                 cx = int(M['m10']/M['m00'])
                 cy = int(M['m01']/M['m00'])
-                
                 # test if 'rat' is in box and is big enough
-                if assaySpecific.ratInBox(cx, cy) and cv2.contourArea(cnt) > myutil.min_area and len(contours) < 7:
-                    ratInFrames += 1 
-                    ratFrame = frameNumber
-
-                    #print "Frame %s: "%frameNumber + "mouse found."
-                else:
-                    ratInFrames = 0
-                    #print "Frame %s: "%frameNumber + str(len(contours))+" contours" # For debugging purposes - must have <7 contours for 50 straight frames to start tracking
-
+                if assaySpecific.ratInBox(cx, cy) and cv2.contourArea(cnt) > myutil.min_area:
+                    noRat = False
         if Single:
             frame = myutil.addBoxes(frame, boxes)
             cv2.imshow(file_name, frame)
@@ -193,12 +173,6 @@ def findRat(camera, backgroundFrame):
             if key == ord("q"):
                 break
 
-
-        frameNumber += 1
-
-
-
-# Added function so no countours will be analyzed from the top right hand corner where the time in HH:MM:SS has been annotated onto each video 
 def excludeTimecode(c):
     M = cv2.moments(c)
     cx = int(M['m10']/M['m00'])
@@ -206,21 +180,7 @@ def excludeTimecode(c):
     if cx > timecode_x and cy < timecode_y:
         return True
 
-# def excludeTopright(c):
-#     M = cv2.moments(c)
-#     cx = int(M['m10']/M['m00'])
-#     cy = int(M['m01']/M['m00'])
-#     if cx > topright_x and cy < topright_y:
-#         return True
-
-def excludeRight(c):
-    M = cv2.moments(c)
-    cx = int(M['m10']/M['m00'])
-    cy = int(M['m01']/M['m00'])
-    if cx > right_x:
-        return True
-
-def trackRat(camera, backgroundFrame, startFrame):
+def trackRat(camera, backgroundFrame):
 # track rat during the rest of the video
     boxes = assaySpecific.getBoxes()
     # storage for rat location
@@ -238,27 +198,35 @@ def trackRat(camera, backgroundFrame, startFrame):
     cy = 0
     box_text = ''
     
-    camera.set(cv2.CAP_PROP_POS_FRAMES, startFrame) # Set the frame to startFrame
-    (grabbed, frame) = camera.read() # grab first frame in analysis period #boolean 
+    (grabbed, frame) = camera.read() # grab first frame in analysis period
+    startFrame = camera.get(cv2.CAP_PROP_POS_FRAMES) # get number of frame at the start of the analysis period
 
 
-    # perform analysis for 300 seconds (5 minutes)
-    while camera.isOpened() and grabbed and (counters.frame <= myutil.fps * 5 * 60):
+
+    # perform analysis for 72 minutes
+    while camera.isOpened() and grabbed and (counters.frame <= myutil.fps * 72 * 60):
         frame, contours = myutil.findCountours(frame, backgroundFrame)
 
         if exclude_timecode:
             contours = filter(lambda c: not excludeTimecode(c), contours)
 
-        if exclude_right:
-            contours = filter(lambda c: not excludeRight(c), contours)
-
         if not contours: # no rat
-            #print counters.frame, '  Warning: no contours'
-            counters.noCountour = counters.noCountour + 1
-            # if there are no contours then program will use the previous frames values, cnt is unchanged,
-            # this fails if there no contours in the first frame to be analyzed, in which case the initial values are used,
-            # which will typically fall outside box
+
+            # if no contours after mouse is in area close to home cage (or is in homecage in prev frame), 
+            # then will assume mouse is in homecage; otherwise it will add 'no contour' counter and record previous frame x,y coordinates
+            
+            if (cy < 50 and (cx > 250 and cx < 350) and has_been_out_of_cage) or (cx == 0 and cy == 0):
+                cnt = [0,0]
+                cx = 0
+                cy = 0
+                xList.append(cx)
+                yList.append(cy)
+            else:
+                print counters.frame, 'Warning: no contours'
+                counters.noCountour = counters.noCountour + 1
+
         else:
+            has_been_out_of_cage = True
             if len(contours) > 1: # more than 1 potential 'rat'
                 counters.multipleContours = counters.multipleContours + 1
                 # find largest contour with its centroid in the box in the hope that this is the rat
@@ -312,8 +280,10 @@ def trackRat(camera, backgroundFrame, startFrame):
             xList.append(cx)
             yList.append(cy)
         else:
-            print counters.frame, 'Warning: mouse not in box'
-            counters.notInBox = counters.notInBox + 1
+            box_text = 'home_cage'
+            dataText = dataText + str(counters.frame) + '\t' + str(cx) + '\t' + str(cy) + '\t' + box_text + '\n'
+            xList.append(cx)
+            yList.append(cy)
 
         if Single:
 
@@ -376,7 +346,7 @@ def plotData(xList, yList):
     idx = z.argsort()
     plot_x, plot_y, z = plot_x[idx], plot_y[idx], z[idx]
 
-    # NN: Create heatmap
+    # Create heatmap
     fig, ax = plt.subplots()
     ax.scatter(plot_x, plot_y, c=z, s=50, cmap=plt.cm.jet, edgecolor='')
     plotlimits = assaySpecific.getPlotLimits()  # get assay specific plot limits
@@ -409,8 +379,7 @@ def processFile(base_Path, file_name, testType):
     if Single:  # user interaction to adjust box size, only for single files
         assaySpecific.adjustBoxes(bgGray)
     findRat(camera, backgroundFrame)       # advances through file until there is a 'rat' within the boundary boxes
-    print("Started tracking at frame " +str(ratFrame) + " (skipped "+str(int(ratFrame/30))+" seconds)")
-    dataText, xList, yList, lastFrame, lastFrameNumber = trackRat(camera, backgroundFrame, ratFrame)  # track rat for 5 minutes
+    dataText, xList, yList, lastFrame, lastFrameNumber = trackRat(camera, backgroundFrame)  # track rat for 5 minutes
     printToConsole(counters, lastFrameNumber)        # print quality control stats
     saveData(headerText, dataText, lastFrame, lastFrameNumber)  # save data to file
     plotData(xList, yList) 
@@ -421,7 +390,7 @@ def processFile(base_Path, file_name, testType):
 
 
 base_Path = 'OF/'  
-file_name = '20180501_PO_31_M_OF_test.mp4' 
+file_name = '20180612_PO_M_345__4.h264.mp4' 
 testType = 'OF'
 
 
@@ -430,14 +399,9 @@ if testType == 'EPM':
 elif testType == 'OF':
     assaySpecific = OF()
  
-
 exclude_timecode = True
-exclude_right = False
-right_x = 500
-timecode_x = 360
-timecode_y = 48
-
-
+timecode_x = 100
+timecode_y = 25
 
 Single = True
 Multiple =  not Single
@@ -450,5 +414,5 @@ elif Multiple:
     fileList = os.listdir(base_Path)
     for file_name in fileList:
         path = os.path.join(base_Path, file_name)
-        if not os.path.isdir(path) and not file_name.startswith('.'): # NN: skip directories and dotfiles
+        if not os.path.isdir(path) and not file_name.startswith('.'): 
             processFile(base_Path, file_name, testType)
